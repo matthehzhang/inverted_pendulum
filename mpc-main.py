@@ -110,9 +110,29 @@ def init():
             u_n2 = k+1
             C[x_n1:x_n2,u_n1:u_n2] = (np.linalg.matrix_power(Ad, j-k) @ Bd)
 
-    return (g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,Ad,Bd,u,Q,R,Qf,u_max,M,C)
+    ########################
+    # create cost matrices #
+    ########################
+    #find Q and R for cost function J1 = Qx1 + Ru1, add them all up while subbing states 
+    #to get cost function to minimize
+    Q_m = np.zeros((2*horizon, 2*horizon))
+    R_m = np.zeros((horizon, horizon))
+    
+    #apparently i can reuse the var for for loops as long as they arent nested
+    #didnt know that, was scared i was running out of 1 letter variables lol
+    for i in range(horizon):
+        Q_m[2*i:2*(i+1),2*i:2*(i+1)] = Q
+    Q_m[2*(horizon-1):2*horizon,2*(horizon-1):2*horizon] = Qf
+    
+    for i in range(horizon):
+        R_m[i:i+1,i:i+1] = R
+    #these are both just diagonals so theyre easy to write    
 
-def mpc_step (x,horizon,Ad,Bd,Q,R,Qf,u_max,M,C):
+
+    return (g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,u,u_max,M,C,Q_m,R_m)
+
+def mpc_step (x,horizon,u_max,M,C,Q_m,R_m):
+
     
 
     return (u)
@@ -123,13 +143,13 @@ def plant_sim (x,u,g,L,m,dt):
     return()
 
 def main():
-    g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,Ad,Bd,u,Q,R,Qf,u_max,M,C = init()  
+    g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,u,u_max,M,C,Q_m,R_m = init()  
 
     #later, implement while loop, make theta start veritcally stable (=np.pi) and
     #implement swing-up control until its small angle then switch to mcp, would be cool
 
     for i in range(total_steps):
-        u = mpc_step(x,horizon,Ad,Bd,Q,R,Qf,u_max,M,C)
+        u = mpc_step(x,horizon,u_max,M,C,Q_m,R_m)
         x = plant_sim(x,u,g,L,m,dt)
     return
 
