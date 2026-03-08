@@ -5,7 +5,7 @@ def init():
     g = 9.81
     m = 0.1
     L = 1
-    theta = np.deg2rad(20.0) 
+    theta = np.deg2rad(30.0) 
                  #mcp onyl works accurately at small angle bc its linearized 
                  # can still work up to around 30 but sketchy (sintheta)=theta approx
                  # gets worse as theta increases
@@ -148,7 +148,9 @@ def mpc_step (x,horizon,u_max,M,C,Q_m,R_m):
     u_j = np.clip(u_j, -u_max, u_max) 
     #clamp out of bounds torque to fit to bounds, controller will only notice post-step
     #suboptimal
-    
+
+    #inequality within function
+
     return (u_j[0,0])
 
 def plant_sim (x,u,g,L,m,dt): 
@@ -179,13 +181,17 @@ def main():
     #############################################
 
     for i in range(total_steps):
+
         #########################################
         theta_hist.append(np.rad2deg(x[0,0]))
         #########################################
+
         u = mpc_step(x,horizon,u_max,M,C,Q_m,R_m)
+
         #########################################
         u_hist.append(u)
         #########################################
+        
         x = plant_sim(x,u,g,L,m,dt)
 
     ############################################
