@@ -132,25 +132,76 @@ def init():
     return (g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,u,u_max,M,C,Q_m,R_m)
 
 def mpc_step (x,horizon,u_max,M,C,Q_m,R_m):
+    #substitute x_next = Mx + CU into J X^tQmX + U^tRmU 
+    #after deriving to find a quadratic equation of input U for J, find min
+    #A_j(u) + B_j = partialdJ/partialdu = 0
 
+    A_j = C.T @ Q_m @ C + R_m
+    B_j = C.T @ Q_m @ M @ x
+
+    u_j = -np.linalg.solve(A_j,B_j) 
+    #solves for u_j (A_j(u_j) = -(B_j)) -> u_j = -(B_j)/(A_j)
+    #solving for u_j when partialdj = 0 finds the least costly moves
+    #negative torque means it acts against the error from setpoint, like springs
+    #x = -(np.linalg.solve(5,10)) -> 5x = -10, x = -2
     
-
-    return (u)
-
-def plant_sim (x,u,g,L,m,dt):
-
+    u_j = np.clip(u_j, -u_max, u_max) 
+    #clamp out of bounds torque to fit to bounds, controller will only notice post-step
+    #suboptimal
     
-    return()
+    return (u_j[0,0])
+
+def plant_sim (x,u,g,L,m,dt): 
+    angle = x[0, 0]
+    v_angle = x[1, 0] 
+    #gets angle and v_angle from state vector x-[2x1]
+
+    a_angle = ((3*g)/(2*L))*np.sin(angle) + (3/(m*L*L))*u 
+    #calc a_angle based on dynamics, (state+input)
+
+    x_next = np.array([
+        [angle + dt*v_angle],
+        [v_angle + dt*a_angle]
+    ])
+
+    return(x_next)
 
 def main():
     g,L,m,theta,dot_theta,dt,horizon,total_steps,A,B,x,x_id,u,u_max,M,C,Q_m,R_m = init()  
 
     #later, implement while loop, make theta start veritcally stable (=np.pi) and
     #implement swing-up control until its small angle then switch to mcp, would be cool
+    
+    #############################################
+    theta_hist = []
+    u_hist = []
+    print("initial x:", x)
+    #############################################
 
     for i in range(total_steps):
+        #########################################
+        theta_hist.append(np.rad2deg(x[0,0]))
+        #########################################
         u = mpc_step(x,horizon,u_max,M,C,Q_m,R_m)
+        #########################################
+        u_hist.append(u)
+        #########################################
         x = plant_sim(x,u,g,L,m,dt)
+
+    ############################################
+    # sim, plot whatever 
+    #didnt have time to do this (10:05 am lol) so i had claude do it
+
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.plot(theta_hist)
+    ax1.set_ylabel('angle (deg)')
+    ax2.plot(u_hist)
+    ax2.set_ylabel('torque (Nm)')
+    plt.xlabel('timestep')
+    plt.show()
+
+    ###########################################
+
     return
 
 main()
